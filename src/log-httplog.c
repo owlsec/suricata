@@ -99,7 +99,7 @@ void TmModuleLogHttpLogIPv6Register (void) {
 
 #define LOG_HTTP_MAXN_NODES 64
 #define LOG_HTTP_NODE_STRLEN 256
-#define LOG_HTTP_NODE_MAXOUTPUTLEN 8048
+#define LOG_HTTP_NODE_MAXOUTPUTLEN 8192
 
 #define TIMESTAMP_DEFAULT_FORMAT "%b %d, %Y; %H:%M:%S"
 #define LOG_HTTP_CF_NONE "-"
@@ -111,6 +111,7 @@ void TmModuleLogHttpLogIPv6Register (void) {
 #define LOG_HTTP_CF_REQUEST_TIME 't'
 #define LOG_HTTP_CF_REQUEST_HEADER 'i'
 #define LOG_HTTP_CF_REQUEST_COOKIE 'C'
+#define LOG_HTTP_CF_REQUEST_LEN 'b'
 #define LOG_HTTP_CF_RESPONSE_STATUS 's'
 #define LOG_HTTP_CF_RESPONSE_HEADER 'o'
 #define LOG_HTTP_CF_RESPONSE_LEN 'B'
@@ -160,7 +161,7 @@ static void CreateTimeString (const struct timeval *ts, char *str, size_t size)
 /* Retrieves the selected cookie value */
 /*  to be used as a workaround until libhtp supported cookie parsing */
 /* Rewrite this!! */
-uint32_t getCookieValue(char *rawcookies, uint32_t rawcookies_len, char *cookiename, 
+static uint8_t GetCookieValue(char *rawcookies, uint8_t rawcookies_len, char *cookiename, 
                                                         char **cookievalue) {
     char *p = rawcookies;
     char *cn = p; /* ptr to cookie name start */
@@ -171,7 +172,7 @@ uint32_t getCookieValue(char *rawcookies, uint32_t rawcookies_len, char *cookien
         } else if (cv != NULL && (*p == ';' || p == rawcookies + rawcookies_len - 1) ) {
             /* Found end of cookie */
             if (strlen(cookiename) == (unsigned int) (cv-cn-1) && 
-                        strncmp(cookiename, cn, cv-cn-1) == 0) {
+                        memcmp(cookiename, cn, cv-cn-1) == 0) {
                 *cookievalue = cv;
                 return (uint32_t) (p-cv);
             }
@@ -315,7 +316,7 @@ static void LogHttpLogCustom(LogHttpLogThread *aft, htp_tx_t *tx, const struct t
                 if (tx->request_headers != NULL) {
                     h_request_hdr = table_getc(tx->request_headers, "Cookie");
                     if (h_request_hdr != NULL) {
-                        cvalue_len = getCookieValue((char *)bstr_ptr(h_request_hdr->value),
+                        cvalue_len = GetCookieValue((char *)bstr_ptr(h_request_hdr->value),
                                     bstr_len(h_request_hdr->value), httplog_ctx->cf_nodes[i]->data,
                                     (char **) &cvalue);
                     }
@@ -330,6 +331,10 @@ static void LogHttpLogCustom(LogHttpLogThread *aft, htp_tx_t *tx, const struct t
                 } else {
                     MemBufferWriteString(aft->buffer, LOG_HTTP_CF_NONE);
                 }
+                break;
+            case LOG_HTTP_CF_REQUEST_LEN:
+            /* REQUEST LEN */
+                MemBufferWriteString(aft->buffer, "%"PRIuMAX"", (uintmax_t)tx->request_message_len);
                 break;
             case LOG_HTTP_CF_RESPONSE_STATUS:
             /* RESPONSE STATUS */
