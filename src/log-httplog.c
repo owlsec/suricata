@@ -368,6 +368,11 @@ static void LogHttpLogCustom(LogHttpLogThread *aft, htp_tx_t *tx, const struct t
             /* RESPONSE LEN */
                 MemBufferWriteString(aft->buffer, "%"PRIuMAX"", (uintmax_t)tx->response_message_len);
                 break;
+            default:
+            /* NO MATCH */
+                MemBufferWriteString(aft->buffer, LOG_HTTP_CF_NONE);
+                SCLogDebug("No matching parameter %%%c for custom http log.", httplog_ctx->cf_nodes[i]->type);
+                break;
         }
     }
     MemBufferWriteString(aft->buffer, "\n");
