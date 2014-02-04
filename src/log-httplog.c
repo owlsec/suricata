@@ -208,7 +208,7 @@ static void LogHttpLogCustom(LogHttpLogThread *aft, htp_tx_t *tx, const struct t
         switch (httplog_ctx->cf_nodes[i]->type){
             case LOG_HTTP_CF_LITERAL:
             /* LITERAL */
-                MemBufferWriteString(aft->buffer, "%s", httplog_ctx->cf_nodes[i]->data);
+                MemBufferWriteString(aft->buffer, httplog_ctx->cf_nodes[i]->data);
                 break;
             case LOG_HTTP_CF_TIMESTAMP:
             /* TIMESTAMP */
